@@ -1,4 +1,4 @@
-"Id","Expiriment","Sex","Drug","Genotype","Trial","Outcome"
+"Id","Experiment","Sex","Drug","Genotype","Trial","Outcome"
 101,1,"M","Saline","WT",1,0.014
 102,1,"M","Saline","WT",1,0.053
 103,1,"M","Saline","WT",1,0.154

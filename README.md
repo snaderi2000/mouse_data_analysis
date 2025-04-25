@@ -5,7 +5,7 @@
 The dataset is stored in **long format**, where each row represents a single trial for a mouse. It includes the following columns:
 
 - **`Id`**: Unique identifier for each mouse. Mice with `Id ≤ 100` were prepared by Reuben, and mice with `Id > 100` were prepared by Mimi.
-- **`Expiriment`**: The experiment session number. Reuben’s mice each participated in 2 experiments, and Mimi’s mice each participated in 3 experiments.
+- **`Experiment`**: The experiment session number. Reuben’s mice each participated in 2 experiments, and Mimi’s mice each participated in 3 experiments.
 - **`Sex`**: Biological sex of the mouse (`M` for male, `F` for female).
 - **`Drug`**: Drug condition administered during the trial (`Saline` or `SKF`(at dosage of 3.0 mg/kg) ).
 - **`Genotype`**: Genetic type of the mouse (`KI` for Knock-In or `WT` for Wild-Type).
