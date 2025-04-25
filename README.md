@@ -14,7 +14,7 @@ The dataset is stored in **long format**, where each row represents a single tri
 
 ## ‍ Mouse Counts by Group
 
-The dataset includes a total of **54 mice**:
+The dataset includes a total of **61 mice**:
 
 - Reuben contributed 24 mice evenly split across genotype and sex: 7 Female KI, 7 Female WT, 5 Male KI, and 5 Male WT.
 - Mimi contributed 37 mice: 11 Female KI, 12 Female WT, 7 Male KI, and 7 Male WT.
