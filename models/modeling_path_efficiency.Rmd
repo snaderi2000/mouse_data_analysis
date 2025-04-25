@@ -1,0 +1,121 @@
+---
+title: "modeling_path_efficiency"
+output: pdf_document
+date: "2025-04-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Required Packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(lmerTest)  # for p-values
+library(lattice)
+```
+
+# Load the data
+
+```{r}
+df <- read.csv("~/coding_projects/mouse_data_analysis/data/combined_mouse_data.csv")
+head(df)
+```
+
+# Make a plot of path efficiency accross trials
+
+```{r}
+# Step 1: Average per mouse across experiment sessions
+mouse_summary <- df %>%
+  group_by(Id, Trial, Genotype, Drug) %>%
+  summarize(Mean_Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop")
+
+# Step 2: Compute group mean and standard error
+plot_data <- mouse_summary %>%
+  group_by(Trial, Genotype, Drug) %>%
+  summarize(
+    Mean_Path_Efficiency = mean(Mean_Outcome),
+    SE = sd(Mean_Outcome) / sqrt(n()),  # Standard Error
+    .groups = "drop"
+  )
+
+# Step 3: Plotting
+ggplot(plot_data, aes(
+  x = Trial,
+  y = Mean_Path_Efficiency,
+  color = Drug,
+  group = interaction(Drug, Genotype),
+  linetype = Genotype
+)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) + 
+  geom_errorbar(
+    aes(ymin = Mean_Path_Efficiency - SE, ymax = Mean_Path_Efficiency + SE),
+    width = 0.05
+  ) +
+  labs(
+    title = "Learning Curve: Path Efficiency Over Trials (Combined Dataset)",
+    x = "Trial Number",
+    y = "Mean Path Efficiency",
+    caption = "Error bars represent ±1 standard error of the mean (SEM) across mice."
+  ) +
+  scale_linetype_manual(values = c("WT" = "dashed", "KI" = "solid")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.caption = element_text(hjust = 0.5)  # ← centers the caption
+  )
+
+  
+
+```
+
+Based upon the graph, all the mice seem to be learning as their path efficiency is greater in trial 4 than in trial 1. WT also seems to have the greatest rate of improvement, especially when treated with SKF. In contrast, KI mice improve more gradually, and their learning appears less sensitive to drug treatment.
+
+# Convert data types to factors
+
+```{r}
+df$Id <- factor(df$Id)
+df$Expiriment <- factor(df$Expiriment)
+```
+
+# Fit the LMM
+
+```{r}
+lmm <- lmer(
+  Outcome ~ Drug * Genotype * Trial + Sex * Trial + (1 | Id/Expiriment),
+  data = df,
+  REML = FALSE
+)
+summary(lmm)
+```
+
+# Model Diagnostics
+
+We check the plot diagnostics from [here](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf)
+
+## Fitted values vs residuals
+
+```{r}
+plot(lmm)
+```
+Downward trend may indicate slight nonlinearity observed
+
+## scale-location plots
+```{r}
+plot(lmm, sqrt(abs(resid(.))) ~ fitted(.), type = c("p", "smooth"))
+```
+Doesn't seem to be an issue with heteroscedasticity 
+
+
+## Quantile-Quantile plot
+```{r}
+qqmath(lmm)
+```
+Some minor deviation from the normality assumption of the residuals. 
+
+
+
