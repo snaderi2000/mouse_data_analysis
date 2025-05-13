@@ -16,6 +16,8 @@ library(ggplot2)
 library(lme4)
 library(lmerTest)  # for p-values
 library(lattice)
+library(emmeans)
+
 ```
 
 # Load the data
@@ -73,29 +75,70 @@ ggplot(plot_data, aes(
 
 ```
 
+
 Based upon the graph, all the mice seem to be learning as their path efficiency is greater in trial 4 than in trial 1. WT also seems to have the greatest rate of improvement, especially when treated with SKF. In contrast, KI mice improve more gradually, and their learning appears less sensitive to drug treatment.
 
 # Convert data types to factors
 
 ```{r}
 df$Id <- factor(df$Id)
-df$Expiriment <- factor(df$Expiriment)
+df$Experiment <- factor(df$Experiment)
 ```
 
 # Fit the LMM
-
+(baseline: Drug: Saline, Genotype: WT, Sex: F, Trial: 1 )
 ```{r}
 lmm <- lmer(
-  Outcome ~ Drug * Genotype * Trial + Sex * Trial + (1 | Id/Expiriment),
+  log(Outcome) ~ Drug*Genotype*Trial + Sex*Trial + (1 | Id/Experiment),
   data = df,
   REML = FALSE
 )
 summary(lmm)
 ```
 
+Log transform as ratio is not normal 
+
+# Post Hoc Analysis 
+
+
+
+```{r}
+# Get estimated slopes of Trial within each Drug × Genotype group
+em_trends <- emtrends(lmm, ~ Drug * Genotype, var = "Trial")
+summary(em_trends)
+```
+
+
+```{r}
+# Contrast the learning slopes between SKF KI and SKF WT
+contrast(em_trends, method = list("SKF KI - SKF WT" = c(0, 1, 0, -1)))
+
+```
+Clear significance, good! 
+
+
+
+Now let us check sex difference. 
+
+
+
+```{r}
+# Get EMMs for Sex
+em_sex <- emmeans(lmm, ~ Sex)
+
+# Contrast the levels of Sex
+contrast(em_sex, method = "pairwise")
+```
+No significant difference 
+
 # Model Diagnostics
 
 We check the plot diagnostics from [here](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf)
+
+
+
+
+
 
 ## Fitted values vs residuals
 
@@ -116,6 +159,8 @@ Doesn't seem to be an issue with heteroscedasticity
 qqmath(lmm)
 ```
 Some minor deviation from the normality assumption of the residuals. 
+
+
 
 
 
