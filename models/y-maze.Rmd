@@ -1,0 +1,130 @@
+---
+title: "y_maze"
+output:
+  pdf_document: default
+  html_document: default
+date: "2025-05-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load dplyr for filtering
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r}
+df <- read.csv("~/Downloads/Y-Maze.csv")
+```
+
+```{r}
+head(df)
+```
+
+
+
+
+```{r}
+# Summarize mean time for each combination
+summary_df <- df %>%
+  group_by(Genotype, Drug, Novel_Arm) %>%
+  summarise(Mean_Time = mean(Time), .groups = "drop")
+
+# Plot
+ggplot(summary_df, aes(x = Genotype, y = Mean_Time, fill = as.factor(Novel_Arm))) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(~ Drug) +
+  labs(
+    title = "Mean Time in Novel vs Other Arm",
+    x = "Genotype",
+    y = "Mean Time (s)",
+    fill = "Novel Arm"
+  ) +
+  scale_fill_manual(values = c("0" = "gray70", "1" = "steelblue"), 
+                    labels = c("Other", "Novel")) +
+  theme_minimal(base_size = 14)
+
+```
+
+
+
+
+```{r}
+df$Mouse_ID <- factor(df$Mouse_ID)
+df$Drug <- factor(df$Drug)
+df$Genotype <- factor(df$Genotype)
+df$Novel_Arm <- factor(df$Novel_Arm)
+df$Group <- interaction(df$Drug, df$Genotype)
+
+# Get unique groups
+groups <- unique(df$Group)
+
+# Store results
+results <- data.frame(Group = character(), p = numeric(), t = numeric(), df = numeric(),
+                      mean_diff = numeric(), shapiro_p = numeric(), stringsAsFactors = FALSE)
+
+# Loop through each group
+for (g in groups) {
+  cat("\n---", g, "---\n")
+  sub_df <- subset(df, Group == g)
+  
+  # Reshape to wide format
+  wide <- reshape(sub_df, idvar = "Mouse_ID", timevar = "Novel_Arm", direction = "wide")
+  
+  if (all(c("Time.0", "Time.1") %in% names(wide))) {
+    diffs <- wide$Time.1 - wide$Time.0
+    shapiro_test <- shapiro.test(diffs)
+    #test <- t.test(wide$Time.1, wide$Time.0, paired = TRUE)
+    test <- t.test(wide$Time.1, wide$Time.0, paired = TRUE, alternative = "greater")
+
+    cat("Shapiro-Wilk p-value:", round(shapiro_test$p.value, 4), "\n")
+    print(test)
+    
+    results <- rbind(results, data.frame(
+      Group = as.character(g),
+      p = test$p.value,
+      t = test$statistic,
+      df = test$parameter,
+      mean_diff = mean(diffs),
+      shapiro_p = shapiro_test$p.value
+    ))
+  } else {
+    cat("Skipping group due to insufficient data\n")
+  }
+}
+
+# Adjust p-values
+results$adjusted_p <- p.adjust(results$p, method = "holm")
+
+# Print final result table
+print(results)
+
+```
+
+## Paired t-tests: Novel Arm Preference
+
+We tested whether mice spent significantly more time in the **novel arm** than in the **familiar arm** within each Drug × Genotype group using **one-sided paired t-tests**.
+
+### Hypotheses
+
+Let $\mu_{\text{novel}}$ be the mean time spent in the novel arm, and $\mu_{\text{familiar}}$ the mean time in the familiar arm.
+
+-   **Null hypothesis**: $H_0: \mu_{\text{novel}} \leq \mu_{\text{familiar}}$
+-   **Alternative hypothesis**: $H_1: \mu_{\text{novel}} > \mu_{\text{familiar}}$
+
+We use `alternative = "greater"` in `t.test()`.
+
+### Assumptions
+
+-   **Paired measurements**: Each mouse provides both arm 0 and arm 1 observations.
+-   **Normality of differences**: Checked using the [Shapiro–Wilk test](https://en.wikipedia.org/wiki/Shapiro%E2%80%93Wilk_test).\
+    If p \> 0.05, the normality assumption holds.
+-   **Multiple comparisons**: Corrected using the [Holm–Bonferroni method](https://en.wikipedia.org/wiki/Holm%E2%80%93Bonferroni_method).
+
+### Results
+
+Overall, only the **SKF + WT** group spent a significantly greater amount of time in the novel arm (*p* = 0.0066, Holm-adjusted *p* = 0.0266).

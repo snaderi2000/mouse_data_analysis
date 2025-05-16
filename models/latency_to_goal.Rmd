@@ -1,7 +1,7 @@
 ---
-title: "modeling_path_efficiency"
-output: pdf_document
-date: "2025-04-25"
+title: "data_manipulation"
+output: html_document
+date: "2025-05-16"
 ---
 
 ```{r setup, include=FALSE}
@@ -22,7 +22,7 @@ library(tidyr)
 # Load the data
 
 ```{r}
-df <- read.csv("~/coding_projects/mouse_data_analysis/data/combined_mouse_data.csv")
+df <- read.csv("~/coding_projects/mouse_data_analysis/data/combined_mouse_data_escape_latency.csv")
 head(df)
 ```
 
@@ -58,9 +58,9 @@ ggplot(plot_data, aes(
     width = 0.05
   ) +
   labs(
-    title = "Learning Curve: Path Efficiency Over Trials (Combined Dataset)",
+    title = "Learning Curve: Escape Latency Over Trials (Combined Dataset)",
     x = "Trial Number",
-    y = "Mean Path Efficiency",
+    y = "Mean Escape latency in seconds",
     caption = "Error bars represent ±1 standard error of the mean (SEM) across mice."
   ) +
   scale_linetype_manual(values = c("WT" = "dashed", "KI" = "solid")) +
@@ -107,6 +107,9 @@ print(final_table)
 ```
 
 
+
+
+
 Based upon the graph, all the mice seem to be learning as their path efficiency is greater in trial 4 than in trial 1. WT also seems to have the greatest rate of improvement, especially when treated with SKF. In contrast, KI mice improve more gradually, and their learning appears less sensitive to drug treatment.
 
 # Convert data types to factors
@@ -132,7 +135,6 @@ summary(lmm)
 
 Log transform as ratio is not normal 
 
-
 # Model Based Inference 
 
 
@@ -142,75 +144,29 @@ Log transform as ratio is not normal
 em_trends <- emtrends(lmm, ~ Drug * Genotype, var = "Trial")
 summary(em_trends)
 ```
+
 ```{r}
-# Create a data frame with your results
-trend_df <- data.frame(
-  Drug = c("Saline", "SKF", "Saline", "SKF"),
-  Genotype = c("KI", "KI", "WT", "WT"),
-  Estimate = c(0.226, 0.104, 0.274, 0.285),
-  SE = c(0.0498, 0.0498, 0.0494, 0.0489),
-  lower.CL = c(0.12806, 0.00684, 0.17733, 0.18860),
-  upper.CL = c(0.323, 0.202, 0.371, 0.381)
-)
-
-
-
-ggplot(trend_df, aes(x = Genotype, y = Estimate, color = Drug, group = Drug)) +
-  geom_point(position = position_dodge(width = 0.3), size = 3) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
-                position = position_dodge(width = 0.3), width = 0.2) +
-  labs(
-    title = "Estimated Trial Slope by Drug and Genotype",
-    y = "Estimated Slope",
-    x = "Genotype"
-  ) +
-  theme_minimal(base_size = 14) +
-  scale_color_manual(values = c("Saline" = "skyblue", "SKF" = "orange")) +
-  theme(legend.title = element_blank())
-
+(-0.2655 - -0.1914) - ( -0.0342 - -0.1242)
 ```
-
-
 
 
 ```{r}
 # Contrast the learning slopes between SKF KI and SKF WT
+contrast(em_trends, method = list("Difference-in-Differences( (SKF WT - Saline WT) - (SKF KI - Saline KI) )" = c(1, -1, -1, 1)))
+```
+```{r}
 contrast(em_trends, method = list("SKF WT - SKF KI" = c(0, -1, 0, 1)))
+
 ```
-Clear significance, good! 
-
-
-
-
-
-```{r}
-# Contrast the learning slopes between SKF KI and SKF WT
-contrast(em_trends, method = list("Saline WT - Saline KI" = c(-1, 0, 1, 0)))
-```
-
-
-```{r}
-# Contrast the learning slopes between SKF KI and SKF WT
-contrast(em_trends, method = list("Saline KI - SKF KI" = c(1, -1, 0, 0)))
-```
-
-
-
 
 
 Now let us check sex difference. 
 
-```{r}
-contrast(em_trends, method = list("Difference-in-Differences( (SKF WT - Saline WT) - (SKF KI - Saline KI) )" = c(1, -1, -1, 1)))
-```
 
 
-
-
-## sex differences 
 ```{r}
 # Get EMMs for Sex
-em_sex <- emtrends(lmm, ~ Sex, var = "Trial") #emmeans(lmm, ~ Sex)
+em_sex <- emmeans(lmm, ~ Sex)
 
 # Contrast the levels of Sex
 contrast(em_sex, method = "pairwise")
@@ -220,6 +176,11 @@ No significant difference
 # Model Diagnostics
 
 We check the plot diagnostics from [here](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf)
+
+
+
+
+
 
 ## Fitted values vs residuals
 
@@ -240,8 +201,3 @@ Doesn't seem to be an issue with heteroscedasticity
 qqmath(lmm)
 ```
 Some minor deviation from the normality assumption of the residuals. 
-
-
-
-]
-
