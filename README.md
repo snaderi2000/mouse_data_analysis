@@ -10,7 +10,7 @@ The dataset is stored in **long format**, where each row represents a single tri
 - **`Drug`**: Drug condition administered during the trial (`Saline` or `SKF`(at dosage of 3.0 mg/kg) ).
 - **`Genotype`**: Genetic type of the mouse (`KI` for Knock-In or `WT` for Wild-Type).
 - **`Trial`**: Trial number within the experiment session (1 through 4).
-- **`Outcome`**: Path efficiency score for that trial (numeric).
+- **`Outcome`**: Path efficiency, Mean Speed, or Escape Latency for that trial (numeric).
 
 ## ‍ Mouse Counts by Group
 
