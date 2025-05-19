@@ -14,9 +14,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
 library(lme4)
+library(lmerTest)
 library(lattice)
 library(emmeans)
 library(tidyr)
+library(boot)
+
 ```
 
 # Load the data
@@ -28,28 +31,14 @@ head(df)
 
 # Make a plot of path efficiency accross trials
 
+
 ```{r}
-# Step 1: Average per mouse across experiment sessions
-mouse_summary <- df %>%
-  group_by(Id, Trial, Genotype, Drug) %>%
-  summarize(Mean_Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop")
-
-# Step 2: Compute group mean and standard error
-plot_data <- mouse_summary %>%
-  group_by(Trial, Genotype, Drug) %>%
-  summarize(
-    Mean_Path_Efficiency = mean(Mean_Outcome),
-    SE = sd(Mean_Outcome) / sqrt(n()),  # Standard Error
-    .groups = "drop"
-  )
-
-# Step 3: Plotting
 ggplot(plot_data, aes(
   x = Trial,
   y = Mean_Path_Efficiency,
-  color = Drug,
-  group = interaction(Drug, Genotype),
-  linetype = Genotype
+  color = Genotype,
+  linetype = Drug,
+  group = interaction(Drug, Genotype)
 )) +
   geom_line(linewidth = 1.2) +
   geom_point(size = 2) + 
@@ -63,48 +52,16 @@ ggplot(plot_data, aes(
     y = "Mean Path Efficiency",
     caption = "Error bars represent ±1 standard error of the mean (SEM) across mice."
   ) +
-  scale_linetype_manual(values = c("WT" = "dashed", "KI" = "solid")) +
+  scale_linetype_manual(values = c("Saline" = "dashed", "SKF" = "solid")) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold"),
-    plot.caption = element_text(hjust = 0.5)  # ← centers the caption
+    plot.caption = element_text(hjust = 0.5)
   )
-
-  
-
 ```
 
 
-```{r}
-plot_data
-```
 
-
-```{r}
-# Step 1: Compute trial-by-trial slopes
-slope_table <- plot_data %>%
-  arrange(Genotype, Drug, Trial) %>%
-  group_by(Genotype, Drug) %>%
-  mutate(Slope = Mean_Path_Efficiency - lag(Mean_Path_Efficiency)) %>%
-  filter(!is.na(Slope)) %>%
-  mutate(Comparison = paste0("Trial ", Trial - 1, " to ", Trial)) %>%
-  select(Genotype, Drug, Comparison, Slope)
-
-# Step 2: Compute average slope per group
-avg_slope <- slope_table %>%
-  group_by(Genotype, Drug) %>%
-  summarise(Average_Slope = mean(Slope), .groups = "drop")
-
-# Step 3: Merge and pivot for final table
-final_table <- left_join(avg_slope, slope_table, by = c("Genotype", "Drug")) %>%
-  pivot_wider(
-    names_from = Comparison,
-    values_from = Slope
-  )
-
-# View the final table
-print(final_table)
-```
 
 
 Based upon the graph, all the mice seem to be learning as their path efficiency is greater in trial 4 than in trial 1. WT also seems to have the greatest rate of improvement, especially when treated with SKF. In contrast, KI mice improve more gradually, and their learning appears less sensitive to drug treatment.
@@ -117,20 +74,23 @@ df$Experiment <- factor(df$Experiment)
 df$Sex <- factor(df$Sex)
 df$Drug <- factor(df$Drug)
 df$Genotype <- factor(df$Genotype)
+df$Trial <- as.numeric(df$Trial)
 ```
+
+
+
+
 
 # Fit the LMM
 (baseline: Drug: Saline, Genotype: WT, Sex: F, Trial: 1 )
 ```{r}
 lmm <- lmer(
-  log(Outcome) ~ Drug*Genotype*Trial + Sex*Trial + (1 | Id/Experiment),
+  logit(Outcome) ~ Drug*Genotype*Trial + Sex*Trial + (1 | Id/Experiment),
   data = df,
   REML = FALSE
 )
 summary(lmm)
 ```
-
-Log transform as ratio is not normal 
 
 
 # Model Based Inference 
@@ -142,75 +102,19 @@ Log transform as ratio is not normal
 em_trends <- emtrends(lmm, ~ Drug * Genotype, var = "Trial")
 summary(em_trends)
 ```
-```{r}
-# Create a data frame with your results
-trend_df <- data.frame(
-  Drug = c("Saline", "SKF", "Saline", "SKF"),
-  Genotype = c("KI", "KI", "WT", "WT"),
-  Estimate = c(0.226, 0.104, 0.274, 0.285),
-  SE = c(0.0498, 0.0498, 0.0494, 0.0489),
-  lower.CL = c(0.12806, 0.00684, 0.17733, 0.18860),
-  upper.CL = c(0.323, 0.202, 0.371, 0.381)
-)
-
-
-
-ggplot(trend_df, aes(x = Genotype, y = Estimate, color = Drug, group = Drug)) +
-  geom_point(position = position_dodge(width = 0.3), size = 3) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
-                position = position_dodge(width = 0.3), width = 0.2) +
-  labs(
-    title = "Estimated Trial Slope by Drug and Genotype",
-    y = "Estimated Slope",
-    x = "Genotype"
-  ) +
-  theme_minimal(base_size = 14) +
-  scale_color_manual(values = c("Saline" = "skyblue", "SKF" = "orange")) +
-  theme(legend.title = element_blank())
-
-```
-
-
 
 
 ```{r}
 # Contrast the learning slopes between SKF KI and SKF WT
-contrast(em_trends, method = list("SKF WT - SKF KI" = c(0, -1, 0, 1)))
+contrast(em_trends, method = list("(SKF WT - Saline KI) - (SKF KI - Saline WT)" = c(1, -1, -1, 1)))
 ```
 Clear significance, good! 
-
-
-
-
-
-```{r}
-# Contrast the learning slopes between SKF KI and SKF WT
-contrast(em_trends, method = list("Saline WT - Saline KI" = c(-1, 0, 1, 0)))
-```
-
-
-```{r}
-# Contrast the learning slopes between SKF KI and SKF WT
-contrast(em_trends, method = list("Saline KI - SKF KI" = c(1, -1, 0, 0)))
-```
-
-
-
-
-
-Now let us check sex difference. 
-
-```{r}
-contrast(em_trends, method = list("Difference-in-Differences( (SKF WT - Saline WT) - (SKF KI - Saline KI) )" = c(1, -1, -1, 1)))
-```
-
-
 
 
 ## sex differences 
 ```{r}
 # Get EMMs for Sex
-em_sex <- emtrends(lmm, ~ Sex, var = "Trial") #emmeans(lmm, ~ Sex)
+em_sex <- emtrends(lmm, ~ Sex, var = "Trial")
 
 # Contrast the levels of Sex
 contrast(em_sex, method = "pairwise")
@@ -243,5 +147,5 @@ Some minor deviation from the normality assumption of the residuals.
 
 
 
-]
+
 

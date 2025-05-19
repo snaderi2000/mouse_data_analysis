@@ -86,136 +86,32 @@ ggplot(plot_data, aes(
 ```
 
 
-```{r}
-plot_data
-```
-
 
 ```{r}
-# Step 1: Compute trial-by-trial slopes
-slope_table <- plot_data %>%
-  arrange(Genotype, Drug, Trial) %>%
-  group_by(Genotype, Drug) %>%
-  mutate(Slope = Mean_Path_Efficiency - lag(Mean_Path_Efficiency)) %>%
-  filter(!is.na(Slope)) %>%
-  mutate(Comparison = paste0("Trial ", Trial - 1, " to ", Trial)) %>%
-  select(Genotype, Drug, Comparison, Slope)
-
-# Step 2: Compute average slope per group
-avg_slope <- slope_table %>%
-  group_by(Genotype, Drug) %>%
-  summarise(Average_Slope = mean(Slope), .groups = "drop")
-
-# Step 3: Merge and pivot for final table
-final_table <- left_join(avg_slope, slope_table, by = c("Genotype", "Drug")) %>%
-  pivot_wider(
-    names_from = Comparison,
-    values_from = Slope
+ggplot(plot_data, aes(
+  x = Trial,
+  y = Mean_Path_Efficiency,
+  color = Genotype,
+  linetype = Drug,
+  group = interaction(Drug, Genotype)
+)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) + 
+  geom_errorbar(
+    aes(ymin = Mean_Path_Efficiency - SE, ymax = Mean_Path_Efficiency + SE),
+    width = 0.05
+  ) +
+  labs(
+    title = "Learning Curve: Mean Path Speed Over Trials (Combined Dataset)",
+    x = "Trial Number",
+    y = "Mean Path Speed (meters/second)",
+    caption = "Error bars represent ±1 standard error of the mean (SEM) across mice."
+  ) +
+  scale_linetype_manual(values = c("Saline" = "dashed", "SKF" = "solid")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.caption = element_text(hjust = 0.5)
   )
 
-# View the final table
-print(final_table)
 ```
-
-
-
-
-
-Based upon the graph, all the mice seem to be learning as their path efficiency is greater in trial 4 than in trial 1. WT also seems to have the greatest rate of improvement, especially when treated with SKF. In contrast, KI mice improve more gradually, and their learning appears less sensitive to drug treatment.
-
-# Convert data types to factors
-
-```{r}
-df$Id <- factor(df$Id)
-df$Experiment <- factor(df$Experiment)
-df$Sex <- factor(df$Sex)
-df$Drug <- factor(df$Drug)
-df$Genotype <- factor(df$Genotype)
-```
-
-# Fit the LMM
-
-
-
-```{r}
-
-#df <- df %>%
-#  mutate(Outcome = if_else(Outcome == 0, 0.001, Outcome))
-
-```
-
-
-
-
-
-
-(baseline: Drug: Saline, Genotype: WT, Sex: F, Trial: 1 )
-```{r}
-lmm <- lmer(
-  log(Outcome) ~ Drug*Genotype*Trial + Sex*Trial + (1 | Id/Experiment),
-  data = df,
-  REML = FALSE
-)
-summary(lmm)
-```
-
-Log transform as ratio is not normal 
-
-# Model Based Inference 
-
-
-
-```{r}
-# Get estimated slopes of Trial within each Drug × Genotype group
-em_trends <- emtrends(lmm, ~ Drug * Genotype, var = "Trial")
-summary(em_trends)
-```
-
-
-```{r}
-contrast(em_trends, method = list("SKF WT - SKF KI" = c(0, -1, 0, 1)))
-
-```
-
-
-Now let us check sex difference. 
-
-
-
-```{r}
-# Get EMMs for Sex
-em_sex <- emtrends(lmm, ~ Sex, var = "Trial") #emmeans(lmm, ~ Sex)
-
-# Contrast the levels of Sex
-contrast(em_sex, method = "pairwise")
-```
-No significant difference 
-
-# Model Diagnostics
-
-We check the plot diagnostics from [here](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf)
-
-
-
-
-
-
-## Fitted values vs residuals
-
-```{r}
-plot(lmm)
-```
-Downward trend may indicate slight nonlinearity observed
-
-## scale-location plots
-```{r}
-plot(lmm, sqrt(abs(resid(.))) ~ fitted(.), type = c("p", "smooth"))
-```
-Doesn't seem to be an issue with heteroscedasticity 
-
-
-## Quantile-Quantile plot
-```{r}
-qqmath(lmm)
-```
-Some minor deviation from the normality assumption of the residuals. 

@@ -1,0 +1,223 @@
+---
+title: "plots_and_tests_path_efficiency"
+output: pdf_document
+date: "2025-05-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(patchwork)  # To combine the two plots side-by-side
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(lattice)
+library(emmeans)
+library(tidyr)
+```
+
+
+
+```{r}
+df <- read.csv("~/coding_projects/mouse_data_analysis/data/combined_mouse_data.csv")
+head(df)
+```
+
+
+
+
+# Plots
+
+```{r}
+# STEP 1: Prepare the data
+df_filtered <- df %>%
+  filter(Trial %in% c(1, 4)) %>%
+  mutate(Group = paste(Drug, Genotype, sep = "_"),
+         Trial = factor(Trial))  # Ensure Trial is treated as a factor
+
+
+
+```
+
+
+```{r}
+
+# Prepare SKF WT
+df_skf_wt <- df %>%
+  filter(Drug == "SKF", Genotype == "WT", Trial %in% c(1, 4)) %>%
+  group_by(Id, Trial) %>%
+  summarise(Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
+  mutate(Trial = factor(Trial))
+
+p1 <- ggplot(df_skf_wt, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "skyblue", alpha = 0.4, trim = FALSE) +
+  geom_point(position = position_jitter(width = 0.05), color = "blue", alpha = 0.6) +
+  geom_line(aes(group = Id), color = "blue", alpha = 0.5) +
+  labs(title = "SKF WT", x = "Trial", y = "Path Efficiency") +
+  theme_minimal()
+
+# Prepare Saline WT
+df_saline_wt <- df %>%
+  filter(Drug == "Saline", Genotype == "WT", Trial %in% c(1, 4)) %>%
+  group_by(Id, Trial) %>%
+  summarise(Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
+  mutate(Trial = factor(Trial))
+
+p2 <- ggplot(df_saline_wt, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "red", alpha = 0.4, trim = FALSE) +
+  geom_point(position = position_jitter(width = 0.05), color = "darkred", alpha = 0.6) +
+  geom_line(aes(group = Id), color = "darkred", alpha = 0.5) +
+  labs(title = "Saline WT", x = "Trial", y = "Path Efficiency") +
+  theme_minimal()
+
+# Combine the plots side by side
+p1 + p2 + plot_layout(ncol = 2)
+
+
+
+```
+
+
+
+
+
+
+```{r}
+# Prepare SKF KI
+df_skf_ki <- df %>%
+  filter(Drug == "SKF", Genotype == "KI", Trial %in% c(1, 4)) %>%
+  group_by(Id, Trial) %>%
+  summarise(Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
+  mutate(Trial = factor(Trial))
+
+p1 <- ggplot(df_skf_ki, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "skyblue", alpha = 0.4, trim = FALSE) +
+  geom_point(position = position_jitter(width = 0.05), color = "blue", alpha = 0.6) +
+  geom_line(aes(group = Id), color = "blue", alpha = 0.5) +
+  labs(title = "SKF KI", x = "Trial", y = "Path Efficiency") +
+  theme_minimal()
+
+# Prepare Saline KI
+df_saline_ki <- df %>%
+  filter(Drug == "Saline", Genotype == "KI", Trial %in% c(1, 4)) %>%
+  group_by(Id, Trial) %>%
+  summarise(Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
+  mutate(Trial = factor(Trial))
+
+p2 <- ggplot(df_saline_ki, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "red", alpha = 0.4, trim = FALSE) +
+  geom_point(position = position_jitter(width = 0.05), color = "darkred", alpha = 0.6) +
+  geom_line(aes(group = Id), color = "darkred", alpha = 0.5) +
+  labs(title = "Saline KI", x = "Trial", y = "Path Efficiency") +
+  theme_minimal()
+
+# Combine the plots side by side
+p1 + p2 + patchwork::plot_layout(ncol = 2)
+
+```
+
+
+
+
+
+# Tests 
+```{r}
+# 3. Pivot to wide so each mouse has Saline and SKF side-by-side
+df_wide <- df %>%
+  filter(Trial == 4) %>%
+  group_by(Id, Genotype, Sex, Drug) %>%
+  summarize(Mean_Outcome = mean(as.numeric(unlist(Outcome)), na.rm = TRUE), .groups = "drop")  %>%
+  pivot_wider(
+    names_from = Drug,
+    values_from = Mean_Outcome
+  )
+
+# 4. Filter for WT genotype
+df_wt <- df_wide %>% filter(Genotype == "WT")
+
+# 5. Paired t-test: does SKF differ from Saline in WT mice?
+t.test(df_wt$SKF, df_wt$Saline, paired = TRUE, alternative = "greater")
+
+```
+
+
+
+
+
+
+```{r}
+# 4. Filter for KI genotype
+df_ki <- df_wide %>% filter(Genotype == "KI")
+
+# 5. Paired t-test: does SKF differ from Saline in KI mice?
+t.test(df_ki$SKF, df_ki$Saline, paired = TRUE, alternative = "greater")
+```
+
+# trial 1 and trial 4 
+
+
+```{r}
+# Step 1: Filter just Trials 1 and 4
+df_wide_2 <- df %>%
+  filter(Trial %in% c(1, 4)) %>%
+  group_by(Id, Genotype, Sex, Drug, Trial) %>%
+  summarise(Mean_Outcome = mean(as.numeric(Outcome), na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(
+    names_from = Trial,
+    values_from = Mean_Outcome,
+    names_prefix = "Trial_"
+  )
+
+```
+
+
+
+```{r}
+# Helper function to run test and summarize
+run_learning_test <- function(genotype, drug) {
+  df_group <- df_wide_2 %>%
+    filter(Genotype == genotype, Drug == drug)
+  
+  test <- t.test(df_group$Trial_4, df_group$Trial_1,
+                 paired = TRUE, alternative = "greater")
+  
+  data.frame(
+    Genotype = genotype,
+    Drug = drug,
+    t = test$statistic,
+    df = test$parameter,
+    p_value = test$p.value,
+    CI_lower = test$conf.int[1],
+    CI_upper = test$conf.int[2],
+    Mean_Diff = mean(df_group$Trial_4 - df_group$Trial_1, na.rm = TRUE)
+  )
+}
+
+# Run the test for all 4 groups
+results <- bind_rows(
+  run_learning_test("WT", "SKF"),
+  run_learning_test("WT", "Saline"),
+  run_learning_test("KI", "SKF"),
+  run_learning_test("KI", "Saline")
+)
+
+results
+
+```
+
+
+
+# Anova 
+
+

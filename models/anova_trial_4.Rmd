@@ -1,0 +1,140 @@
+---
+title: "anova_path_efficiency"
+output: pdf_document
+date: "2025-05-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(dplyr)
+library(car)
+library(ggplot2)
+library(emmeans)
+library(boot)
+library(afex)
+library(emmeans)
+```
+
+
+```{r}
+df <- read.csv("~/coding_projects/mouse_data_analysis/data/combined_mouse_data.csv")
+head(df)
+```
+
+```{r}
+df_trial_4 <- df %>%
+  group_by(Id, Sex, Drug, Genotype, Experiment) %>%
+  summarise(
+    Outcome = Outcome[Trial == 4],
+    .groups = "drop"
+  ) 
+head(df_trial_4)
+```
+
+
+```{r}
+df_trial_4 <- df_trial_4 %>%
+  mutate(
+    logit_Outcome = logit(Outcome),
+    Drug = as.factor(Drug),
+    Genotype = as.factor(Genotype)
+  )
+```
+
+```{r}
+df_agg <- df_trial_4 %>%
+  group_by(Id, Drug, Genotype) %>%
+  summarise(logit_Outcome = mean(logit_Outcome, na.rm = TRUE), .groups = "drop")
+
+```
+
+
+```{r}
+
+
+aov_afex <- aov_ez(
+  id = "Id",
+  dv = "logit_Outcome",
+  within = "Drug",
+  between = "Genotype",
+  data = df_agg,
+  type = 3
+)
+
+summary(aov_afex)
+
+```
+
+```{r}
+
+
+em <- emmeans(aov_afex, ~ Drug | Genotype)
+pairs(em)  # Compare Saline vs SKF within WT and within KI
+
+```
+
+```{r}
+emmeans(aov_afex, ~ Drug * Genotype)
+```
+
+
+
+
+
+
+```{r}
+emmip(aov_afex, Genotype ~ Drug, CIs = TRUE)
+```
+
+
+# Check Assumptions 
+
+```{r}
+resid_vals <- residuals(aov_afex$lm)
+fitted_vals <- fitted(aov_afex$lm)
+
+```
+
+
+
+```{r}
+qqnorm(resid_vals)
+qqline(resid_vals)
+
+```
+
+
+```{r}
+hist(resid_vals, breaks = 20, main = "Histogram of Residuals", xlab = "Residuals")
+
+```
+
+```{r}
+plot(fitted_vals, resid_vals,
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0, col = "red")
+
+```
+
+```{r}
+leveneTest(logit_Outcome ~ Genotype, data = df_agg)
+
+```
+
+
+```{r}
+# Create an interaction term to represent the 4 groups
+df_agg$Group <- interaction(df_agg$Drug, df_agg$Genotype)
+
+# Run Levene's test on logit-transformed outcome
+leveneTest(logit_Outcome ~ Group, data = df_agg)
+
+```
+They seem fine 
