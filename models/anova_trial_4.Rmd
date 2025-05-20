@@ -48,7 +48,7 @@ df_trial_4 <- df_trial_4 %>%
 
 ```{r}
 df_agg <- df_trial_4 %>%
-  group_by(Id, Drug, Genotype) %>%
+  group_by(Id, Drug, Genotype, Sex) %>%
   summarise(logit_Outcome = mean(logit_Outcome, na.rm = TRUE), .groups = "drop")
 
 ```
@@ -69,6 +69,28 @@ aov_afex <- aov_ez(
 summary(aov_afex)
 
 ```
+
+
+
+
+```{r}
+aov_afex <- aov_ez(
+  id = "Id",
+  dv = "logit_Outcome",
+  within = "Drug",
+  between = c("Genotype", "Sex"),
+  data = df_agg,
+  type = 3
+)
+
+summary(aov_afex)
+```
+
+
+
+
+
+
 
 ```{r}
 

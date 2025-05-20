@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load dplyr for filtering
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 
 ```
 
@@ -49,6 +50,442 @@ ggplot(summary_df, aes(x = Genotype, y = Mean_Time, fill = as.factor(Novel_Arm))
   theme_minimal(base_size = 14)
 
 ```
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Summary stats: group mean + SE
+summary_df <- df %>%
+  group_by(Genotype, Drug, Novel_Arm) %>%
+  summarise(
+    Mean_Time = mean(Time, na.rm = TRUE),
+    SE = sd(Time, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Plot with bars, black dots for individuals, and error bars
+ggplot(summary_df, aes(x = Genotype, y = Mean_Time, fill = as.factor(Novel_Arm))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.7) +
+
+  # Error bars (standard error)
+  geom_errorbar(aes(ymin = Mean_Time - SE, ymax = Mean_Time + SE),
+                position = position_dodge(width = 0.9), width = 0.2) +
+
+  # Black dots for individual mice
+  geom_point(data = df, 
+             aes(x = Genotype, y = Time, fill = as.factor(Novel_Arm)),
+             color = "black", 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9),
+             size = 1.5, alpha = 0.8, inherit.aes = FALSE) +
+
+  facet_wrap(~ Drug) +
+  labs(
+    title = "Mean Time in Novel vs Other Arm",
+    x = "Genotype",
+    y = "Mean Time (s)",
+    fill = "Novel Arm"
+  ) +
+  scale_fill_manual(
+    values = c("0" = "gray70", "1" = "steelblue"),
+    labels = c("Other", "Novel")
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+
+
+
+
+```{r}
+# Create a new variable for the custom order
+df <- df %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF")))
+
+# Update summary_df accordingly
+summary_df <- df %>%
+  group_by(Group, Novel_Arm) %>%
+  summarise(
+    Mean_Time = mean(Time, na.rm = TRUE),
+    SE = sd(Time, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Plot with new ordering
+ggplot(summary_df, aes(x = Group, y = Mean_Time, fill = as.factor(Novel_Arm))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.7) +
+  geom_errorbar(aes(ymin = Mean_Time - SE, ymax = Mean_Time + SE),
+                position = position_dodge(width = 0.9), width = 0.2) +
+  geom_point(data = df, 
+             aes(x = Group, y = Time, fill = as.factor(Novel_Arm)),
+             color = "black", 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9),
+             size = 1.5, alpha = 0.8, inherit.aes = FALSE) +
+  labs(
+    title = "Mean Time in Novel vs Other Arm",
+    x = "Genotype + Drug",
+    y = "Mean Time (s)",
+    fill = "Novel Arm"
+  ) +
+  scale_fill_manual(
+    values = c("0" = "gray70", "1" = "steelblue"),
+    labels = c("Other", "Novel")
+  ) +
+  theme_minimal(base_size = 14) + theme(axis.line = element_line(color = "black", size = 0.8))
+
+```
+
+
+
+```{r}
+# Create a new variable for the custom order
+df <- df %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF")))
+
+# Update summary_df accordingly
+summary_df <- df %>%
+  group_by(Group, Novel_Arm) %>%
+  summarise(
+    Mean_Time = mean(Time, na.rm = TRUE),
+    SE = sd(Time, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Plot with new ordering
+ggplot(summary_df, aes(x = Group, y = Mean_Time, fill = as.factor(Novel_Arm))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.7) +
+  geom_errorbar(aes(ymin = Mean_Time - SE, ymax = Mean_Time + SE),
+                position = position_dodge(width = 0.9), width = 0.2) +
+  geom_point(data = df, 
+             aes(x = Group, y = Time, fill = as.factor(Novel_Arm)),
+             color = "black", 
+             position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.9),
+             size = 1.5, alpha = 0.8, inherit.aes = FALSE) +
+  labs(
+    title = "Mean Time in Novel vs Other Arm",
+    x = "Genotype + Drug",
+    y = "Mean Time (s)",
+    fill = "Novel Arm"
+  ) +
+  scale_fill_manual(
+    values = c("0" = "gray70", "1" = "steelblue"),
+    labels = c("Other", "Novel")
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),           # Remove all grid lines
+    axis.line = element_line(color = "black", size = 0.8),  # Add black axis lines
+    axis.ticks = element_line(color = "black")              # Optional: add axis ticks
+  )
+
+```
+
+
+
+```{r}
+# Ensure Group column is defined
+df <- df %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF")))
+
+# Summary for bar heights
+summary_df <- df %>%
+  group_by(Group, Novel_Arm) %>%
+  summarise(
+    Mean_Time = mean(Time, na.rm = TRUE),
+    SE = sd(Time, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Compute x positions for dodge manually
+df <- df %>%
+  mutate(
+    Novel_Arm = factor(Novel_Arm),
+    x_dodge = as.numeric(Group) + ifelse(Novel_Arm == "0", -0.225, 0.225)
+  )
+
+# Now plot with connecting lines per Mouse_ID
+ggplot(summary_df, aes(x = Group, y = Mean_Time, fill = Novel_Arm)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.7) +
+  geom_errorbar(aes(ymin = Mean_Time - SE, ymax = Mean_Time + SE),
+                position = position_dodge(width = 0.9), width = 0.2) +
+
+  # Connecting lines
+  geom_line(data = df,
+          aes(x = x_dodge, y = Time, group = interaction(Mouse_ID, Group)),
+          color = "black", size = 0.5, alpha = 0.5,
+          inherit.aes = FALSE) +
+
+  # Points
+  geom_point(data = df,
+             aes(x = x_dodge, y = Time, fill = Novel_Arm),
+             shape = 21, color = "black", size = 1.5, alpha = 0.8,
+             inherit.aes = FALSE) +
+
+  labs(
+    title = "Mean Time in Novel vs Other Arm",
+    x = "Genotype + Drug",
+    y = "Mean Time (s)",
+    fill = "Novel Arm"
+  ) +
+  scale_fill_manual(
+    values = c("0" = "gray70", "1" = "steelblue"),
+    labels = c("Other", "Novel")
+  ) +
+  scale_x_discrete(drop = FALSE) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+```
+
+
+```{r}
+# 1) Prep your data with numeric x‐positions
+dodge_amt <- 0.2
+df2 <- df %>%
+  mutate(
+    Group    = factor(paste(Genotype, Drug),
+                      levels = c("WT Saline","WT SKF","KI Saline","KI SKF")),
+    Arm      = factor(Novel_Arm, labels = c("Other","Novel")),
+    x_center = as.numeric(Group),
+    x        = x_center + ifelse(Arm=="Other", -dodge_amt, dodge_amt)
+  )
+
+# 2) Subset those mice that have both Other & Novel in each group
+line_df <- df2 %>%
+  group_by(Group, Mouse_ID) %>%
+  filter(n()==2) %>%
+  ungroup() %>%
+  mutate(Subject_Group = interaction(Group, Mouse_ID))
+
+# 3) Plot violins + paired lines + points
+ggplot() +
+  # half‐violins on the left/right of each group center
+  geom_violin(data = df2,
+              aes(x = x, y = Time, group = interaction(Group, Arm), fill = Arm),
+              width = dodge_amt*2,
+              trim = FALSE,
+              alpha = 0.7) +
+
+  # connecting lines
+  geom_line(data = line_df,
+            aes(x = x, y = Time, group = Subject_Group),
+            color = "black", size = 0.4, alpha = 0.6) +
+
+  # individual points
+  geom_point(data = df2,
+             aes(x = x, y = Time, fill = Arm),
+             shape = 21, color = "black", size = 2, alpha = 0.9) +
+
+  # put the group labels back on the x‐axis
+  scale_x_continuous(
+    breaks = 1:4,
+    labels = levels(df2$Group)
+  ) +
+  scale_fill_manual(values = c(Other = "gray70", Novel = "steelblue")) +
+
+  labs(
+    title = "Mean Time in Novel vs Other Arm",
+    x     = "Genotype + Drug",
+    y     = "Time (s)",
+    fill  = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid   = element_blank(),
+    axis.line    = element_line(color = "black", size = 0.8),
+    axis.ticks   = element_line(color = "black")
+  )
+
+```
+
+
+
+# Discrimination Index 
+
+```{r}
+# Reshape data to wide format to calculate DI per mouse
+di_df <- df %>%
+  pivot_wider(names_from = Novel_Arm, values_from = Time, names_prefix = "Arm_") %>%
+  mutate(
+    DI = Arm_1 / (Arm_0 + Arm_1)
+  )
+
+```
+
+
+
+
+```{r}
+summary_di <- di_df %>%
+  group_by(Genotype, Drug) %>%
+  summarise(
+    Mean_DI = mean(DI, na.rm = TRUE),
+    SE = sd(DI, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  ) %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF")))
+
+```
+
+```{r}
+ggplot(summary_di, aes(x = Group, y = Mean_DI)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.7) +
+  geom_errorbar(aes(ymin = Mean_DI - SE, ymax = Mean_DI + SE), width = 0.2) +
+  geom_point(data = di_df %>%
+               mutate(Group = factor(paste(Genotype, Drug),
+                                     levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF"))),
+             aes(x = Group, y = DI),
+             position = position_jitter(width = 0.1), size = 2, alpha = 0.8) +
+  labs(
+    title = "Discrimination Index by Genotype and Drug",
+    x = "Genotype + Drug",
+    y = "Discrimination Index (DI = Novel / (Novel + Other))"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+```
+
+
+
+
+```{r}
+ggplot(di_df %>%
+         mutate(Group = factor(paste(Genotype, Drug),
+                               levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF"))),
+       aes(x = Group, y = DI)) +
+  geom_violin(fill = "steelblue", alpha = 0.7, width = 0.9, trim = FALSE) +
+  geom_jitter(width = 0.1, size = 2, alpha = 0.8) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "white") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+  labs(
+    title = "Discrimination Index by Genotype and Drug",
+    x = "Genotype + Drug",
+    y = "Discrimination Index (DI = Novel / (Novel + Other))"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+```
+
+
+
+
+```{r}
+di_df <- di_df %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("WT Saline", "WT SKF", "KI Saline", "KI SKF")))
+
+ggplot(di_df, aes(x = Group, y = DI, fill = Group)) +
+  geom_violin(alpha = 0.7, width = 0.9, trim = FALSE) +
+  geom_jitter(width = 0.1, size = 2, alpha = 0.8, aes(color = Group)) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "white") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+  labs(
+    title = "Discrimination Index by Genotype and Drug",
+    x = "Genotype + Drug",
+    y = "Discrimination Index (DI = Novel / (Novel + Other))"
+  ) +
+  scale_fill_manual(values = c(
+    "WT Saline"  = "#ADD8E6",  # light blue
+    "WT SKF"     = "#4682B4",  # dark blue
+    "KI Saline"  = "#F08080",  # light red
+    "KI SKF"     = "#8B0000"   # dark red
+  )) +
+  scale_color_manual(values = c(
+    "WT Saline"  = "black",
+    "WT SKF"     = "black",
+    "KI Saline"  = "black",
+    "KI SKF"     = "black"
+  )) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black"),
+    legend.position = "none"  # optional: hide legend if not needed
+  )
+
+```
+
+
+
+
+```{r}
+# Filter data for WT only
+wt_summary <- summary_di %>% filter(grepl("^WT", Group))
+wt_data <- di_df %>% filter(Genotype == "WT") %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("WT Saline", "WT SKF")))
+
+# Plot
+ggplot(wt_summary, aes(x = Group, y = Mean_DI)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.7) +
+  geom_errorbar(aes(ymin = Mean_DI - SE, ymax = Mean_DI + SE), width = 0.2) +
+  geom_point(data = wt_data, aes(x = Group, y = DI),
+             position = position_jitter(width = 0.1), size = 2, alpha = 0.8) +
+  labs(
+    title = "Discrimination Index for WT Mice",
+    x = "Drug",
+    y = "Discrimination Index (DI = Novel / (Novel + Other))"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+```
+
+
+
+
+```{r}
+# Filter data for KI only
+ki_summary <- summary_di %>% filter(grepl("^KI", Group))
+ki_data <- di_df %>% filter(Genotype == "KI") %>%
+  mutate(Group = factor(paste(Genotype, Drug),
+                        levels = c("KI Saline", "KI SKF")))
+
+# Plot
+ggplot(ki_summary, aes(x = Group, y = Mean_DI)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.7) +
+  geom_errorbar(aes(ymin = Mean_DI - SE, ymax = Mean_DI + SE), width = 0.2) +
+  geom_point(data = ki_data, aes(x = Group, y = DI),
+             position = position_jitter(width = 0.1), size = 2, alpha = 0.8) +
+  labs(
+    title = "Discrimination Index for KI Mice",
+    x = "Drug",
+    y = "Discrimination Index (DI = Novel / (Novel + Other))"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+```
+
+
 
 
 

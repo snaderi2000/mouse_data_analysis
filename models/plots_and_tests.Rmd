@@ -65,7 +65,12 @@ p1 <- ggplot(df_skf_wt, aes(x = Trial, y = Outcome)) +
   geom_point(position = position_jitter(width = 0.05), color = "blue", alpha = 0.6) +
   geom_line(aes(group = Id), color = "blue", alpha = 0.5) +
   labs(title = "SKF WT", x = "Trial", y = "Path Efficiency") +
-  theme_minimal()
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),           # Remove all grid lines
+    axis.line = element_line(color = "black", size = 0.8),  # Add black axis lines
+    axis.ticks = element_line(color = "black")              # Optional: add axis ticks
+  )
 
 # Prepare Saline WT
 df_saline_wt <- df %>%
@@ -79,17 +84,83 @@ p2 <- ggplot(df_saline_wt, aes(x = Trial, y = Outcome)) +
   geom_point(position = position_jitter(width = 0.05), color = "darkred", alpha = 0.6) +
   geom_line(aes(group = Id), color = "darkred", alpha = 0.5) +
   labs(title = "Saline WT", x = "Trial", y = "Path Efficiency") +
-  theme_minimal()
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),           # Remove all grid lines
+    axis.line = element_line(color = "black", size = 0.8),  # Add black axis lines
+    axis.ticks = element_line(color = "black")              # Optional: add axis ticks
+  )
 
 # Combine the plots side by side
-p1 + p2 + plot_layout(ncol = 2)
+p2 + p1 + plot_layout(ncol = 2)
 
 
 
 ```
 
+```{r}
+# Lighter blue for Saline WT
+p2 <- ggplot(df_saline_wt, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "#ADD8E6", alpha = 0.4, trim = FALSE) +  # light blue
+  geom_point(position = position_jitter(width = 0.05), color = "#1E90FF", alpha = 0.6) +  # dodger blue
+  geom_line(aes(group = Id), color = "#1E90FF", alpha = 0.5) +
+  labs(title = "Saline WT", x = "Trial", y = "Path Efficiency") +
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+# Darker blue for SKF WT
+p1 <- ggplot(df_skf_wt, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "#4682B4", alpha = 0.4, trim = FALSE) +  # steel blue
+  geom_point(position = position_jitter(width = 0.05), color = "#00008B", alpha = 0.6) +  # dark blue
+  geom_line(aes(group = Id), color = "#00008B", alpha = 0.5) +
+  labs(title = "SKF WT", x = "Trial", y = "Path Efficiency") +
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+# Combine the plots
+p2 + p1 + patchwork::plot_layout(ncol = 2)
+
+```
 
 
+```{r}
+p1 <- ggplot(df_skf_wt, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "#4682B4", alpha = 0.4, trim = FALSE) +
+  geom_point(position = position_jitter(width = 0.05), color = "#00008B", alpha = 0.6) +
+  geom_line(aes(group = Id), color = "#00008B", alpha = 0.5) +
+  stat_summary(fun = mean, aes(group = 1), geom = "line", color = "black", size = 1.2) +
+  labs(title = "SKF WT", x = "Trial", y = "Path Efficiency") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+p1
+```
+```{r}
+p2 <- ggplot(df_saline_wt, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "#ADD8E6", alpha = 0.4, trim = FALSE) +
+  geom_point(position = position_jitter(width = 0.05), color = "#1E90FF", alpha = 0.6) +
+  geom_line(aes(group = Id), color = "#1E90FF", alpha = 0.5) +
+  stat_summary(fun = mean, aes(group = 1), geom = "line", color = "black", size = 1.2) +
+  labs(title = "Saline WT", x = "Trial", y = "Path Efficiency") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+p2
+```
 
 
 
@@ -101,12 +172,16 @@ df_skf_ki <- df %>%
   summarise(Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
   mutate(Trial = factor(Trial))
 
-p1 <- ggplot(df_skf_ki, aes(x = Trial, y = Outcome)) +
+p3 <- ggplot(df_skf_ki, aes(x = Trial, y = Outcome)) +
   geom_violin(fill = "skyblue", alpha = 0.4, trim = FALSE) +
   geom_point(position = position_jitter(width = 0.05), color = "blue", alpha = 0.6) +
   geom_line(aes(group = Id), color = "blue", alpha = 0.5) +
   labs(title = "SKF KI", x = "Trial", y = "Path Efficiency") +
-  theme_minimal()
+  theme_minimal() + theme(
+    panel.grid = element_blank(),           # Remove all grid lines
+    axis.line = element_line(color = "black", size = 0.8),  # Add black axis lines
+    axis.ticks = element_line(color = "black")              # Optional: add axis ticks
+  )
 
 # Prepare Saline KI
 df_saline_ki <- df %>%
@@ -115,18 +190,73 @@ df_saline_ki <- df %>%
   summarise(Outcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
   mutate(Trial = factor(Trial))
 
-p2 <- ggplot(df_saline_ki, aes(x = Trial, y = Outcome)) +
+p4 <- ggplot(df_saline_ki, aes(x = Trial, y = Outcome)) +
   geom_violin(fill = "red", alpha = 0.4, trim = FALSE) +
   geom_point(position = position_jitter(width = 0.05), color = "darkred", alpha = 0.6) +
   geom_line(aes(group = Id), color = "darkred", alpha = 0.5) +
   labs(title = "Saline KI", x = "Trial", y = "Path Efficiency") +
-  theme_minimal()
+  theme_minimal() + theme(
+    panel.grid = element_blank(),           # Remove all grid lines
+    axis.line = element_line(color = "black", size = 0.8),  # Add black axis lines
+    axis.ticks = element_line(color = "black")              # Optional: add axis ticks
+  )
 
 # Combine the plots side by side
-p1 + p2 + patchwork::plot_layout(ncol = 2)
+p4 + p3 + patchwork::plot_layout(ncol = 2)
 
 ```
 
+```{r}
+p3 <- ggplot(df_skf_ki, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "#8B0000", alpha = 0.4, trim = FALSE) +  # dark red
+  geom_point(position = position_jitter(width = 0.05), color = "#800000", alpha = 0.6) +  # maroon
+  geom_line(aes(group = Id), color = "#800000", alpha = 0.5) +
+  stat_summary(fun = mean, aes(group = 1), geom = "line", color = "black", size = 1.2) +
+  labs(title = "SKF KI", x = "Trial", y = "Path Efficiency") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+```
+
+
+
+```{r}
+p4 <- ggplot(df_saline_ki, aes(x = Trial, y = Outcome)) +
+  geom_violin(fill = "#F08080", alpha = 0.4, trim = FALSE) +  # light coral
+  geom_point(position = position_jitter(width = 0.05), color = "#B22222", alpha = 0.6) +  # firebrick
+  geom_line(aes(group = Id), color = "#B22222", alpha = 0.5) +
+  stat_summary(fun = mean, aes(group = 1), geom = "line", color = "black", size = 1.2) +
+  labs(title = "Saline KI", x = "Trial", y = "Path Efficiency") +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", size = 0.8),
+    axis.ticks = element_line(color = "black")
+  )
+
+```
+
+
+
+```{r}
+# Combine the plots side by side
+p2 + p1 + patchwork::plot_layout(ncol = 2)
+```
+
+
+```{r}
+# Combine the plots side by side
+p4 + p3 + patchwork::plot_layout(ncol = 2)
+```
+
+
+```{r}
+p2 + p1 + p4 + p3 + patchwork::plot_layout(ncol = 2)
+```
 
 
 
@@ -217,7 +347,62 @@ results
 ```
 
 
+```{r}
+df_gain <- df %>%
+  # keep only Trials 1 and 4
+  filter(Trial %in% c(1, 4)) %>%
+  # average over any repeated experiments per mouse×trial
+  group_by(Id, Drug, Genotype, Trial) %>%
+  summarise(MeanOutcome = mean(Outcome, na.rm = TRUE), .groups = "drop") %>%
+  # turn Trial levels into two columns
+  pivot_wider(names_from  = Trial,
+              values_from = MeanOutcome,
+              names_prefix = "T") %>%
+  # compute the gain
+  mutate(Gain = T4 - T1)
 
-# Anova 
+# Inspect
+head(df_gain)
+```
+
+
+```{r}
+# 1. Filter WT mice
+df_wt <- df_gain %>% filter(Genotype == "WT")
+
+# 2. Reshape to wide format: each row is a mouse, columns = SKF/Saline gains
+df_wt_wide <- df_wt %>%
+  select(Id, Drug, Gain) %>%
+  pivot_wider(names_from = Drug, values_from = Gain)
+
+head(df_wt_wide)
+```
+
+
+```{r}
+df_wt_wide <- df_wt_wide %>%
+  mutate(Diff = SKF - Saline)
+
+# Histogram of differences
+hist(df_wt_wide$Diff,
+     main = "Histogram of (SKF - Saline) Gains",
+     xlab = "Gain Difference (SKF - Saline)",
+     col = "skyblue", border = "white")
+
+# QQ plot of differences
+qqnorm(df_wt_wide$Diff, main = "QQ Plot of Gain Differences")
+qqline(df_wt_wide$Diff, col = "red")
+
+```
+
+
+```{r}
+t.test(df_wt_wide$SKF, df_wt_wide$Saline,
+       paired = TRUE,
+       alternative = "greater")
+
+```
+
+
 
 
